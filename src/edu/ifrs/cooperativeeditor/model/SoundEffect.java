@@ -35,6 +35,7 @@ public class SoundEffect implements Serializable {
 	private String effect;
 	private String color;
 	private String position;
+	private String timbre;
 
 	public Long getId() {
 		return id;
@@ -68,11 +69,19 @@ public class SoundEffect implements Serializable {
 		this.position = position;
 	}
 	
+	public String getTimbre() {
+		return timbre;
+	}
+
+	public void setTimbre(String timbre) {
+		this.timbre = timbre;
+	}
+
 	public String toString() {
 		return "{\"id\":\""+ getId() +"\","
 				+ "\"effect\":\""+ getEffect()+"\","
 				+ "\"color\":\""+ getColor()+"\","
-				+ "\"position\":\""+ getPosition()+"\"}";
+				+ "\"position\":\""+ getPosition()+"\","
+				+ "\"timbre\":\"" + getTimbre()+"\"}";
 	}
-	
 }

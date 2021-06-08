@@ -59,7 +59,7 @@ public class FormWebService {
 
 	private static final Logger log = Logger.getLogger(FormWebService.class.getName());
 
-	public static final String URL = "http://localhost:8080/CooperationEditor/editor/";
+	public static final String URL = "http://:/CooperationEditor/editor/";
 
 	@EJB
 	private DataObject dao;

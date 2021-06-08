@@ -89,7 +89,7 @@ public class CooperativeEditorWS {
 		InputMessage input = parseInputMessage(jsonMessage, session, hashProduction);
 		boolean returnMessage = false;
 		OutputMessage out = null;
-		
+
 		if (input != null) {
 			switch (Type.valueOf(input.getType())) {
 			case SEND_MESSAGE:
@@ -109,8 +109,8 @@ public class CooperativeEditorWS {
 				returnMessage = (out != null);
 				break;
 			case FINISH_PARTICIPATION:
-					out = this.finishParticipationHandler(input, session, hashProduction);
-					returnMessage = true;
+				out = this.finishParticipationHandler(input, session, hashProduction);
+				returnMessage = true;
 				break;
 			default:
 				break;
@@ -151,38 +151,37 @@ public class CooperativeEditorWS {
 
 		// retrieves the id of the logged-in user in the http session
 		String userId = httpSession.getAttribute("userId").toString();
-		
+
 		User user = findUserOnList(Long.parseLong(userId), hashProduction);
-		
-		if(user == null) {
-			
+
+		if (user == null) {
+
 			List<String> strUPC = new ArrayList<String>();
 			for (User u : activeUsers.get(hashProduction)) {
 				if (u.getUserProductionConfiguration() != null)
-						strUPC.add(u.getUserProductionConfiguration().toString());
-				}
-			
+					strUPC.add(u.getUserProductionConfiguration().toString());
+			}
+
 			OutputMessage outLast = registerUser(userId, session, hashProduction);
-					
+
 			OutputMessage out = new OutputMessage();
 			out.setType(Type.LOAD_INFORMATION.name());
-			
-			
-			
+
 			User discoveredUser = findUserOnList(session, hashProduction);
-			String jsonUser = "{\"id\":\"" + discoveredUser.getId().toString() + "\",\"name\":\""+ discoveredUser.getName()+"\"}";
+			String jsonUser = "{\"id\":\"" + discoveredUser.getId().toString() + "\",\"name\":\""
+					+ discoveredUser.getName() + "\"}";
 			out.addData("user", jsonUser);
 			out.addData("production", production.toString());
 			out.addData("uPCsConnected", strUPC.toString());
 			out.addData("messages", dao.getMessages(hashProduction));
-			
+
 			session.getBasicRemote().sendText(out.toString());
 			log.log(Level.INFO, "outputMessage: " + out.toString());
-			
+
 			// sends a text to the client
 			sendToAll(outLast.toString(), session, hashProduction);
 			log.log(Level.INFO, "outputMessage: " + outLast.toString());
-			
+
 		} else {
 			session.getBasicRemote().sendText("isLoggedIn");
 		}
@@ -195,20 +194,21 @@ public class CooperativeEditorWS {
 	 */
 	@OnClose
 	public void onClose(Session session, @PathParam("hashProduction") String hashProduction) {
-		
+
 		log.log(Level.INFO, "onClose");
-		
+
 		User user = findUserOnList(session, hashProduction);
 
 		activeUsers.get(hashProduction).remove(user);
 
 		if (user != null && user.getUserProductionConfiguration() != null) {
-			Boolean releaseProduction = user.getUserProductionConfiguration().getSituation().equals(Situation.CONTRIBUTING);
-				
+			Boolean releaseProduction = user.getUserProductionConfiguration().getSituation()
+					.equals(Situation.CONTRIBUTING);
+
 			List<String> strUPC = new ArrayList<String>();
 			for (User u : activeUsers.get(hashProduction)) {
 				if (u.getUserProductionConfiguration() != null) {
-					if(releaseProduction)
+					if (releaseProduction)
 						u.getUserProductionConfiguration().setSituation(Situation.FREE);
 					strUPC.add(u.getUserProductionConfiguration().toString());
 				}
@@ -218,14 +218,14 @@ public class CooperativeEditorWS {
 			out.setType(Type.DISCONNECTION.name());
 			out.addData("size", String.valueOf(activeUsers.get(hashProduction).size()));
 			out.addData("userProductionConfigurations", strUPC.toString());
-			if(user.getUserProductionConfiguration() != null)
+			if (user.getUserProductionConfiguration() != null)
 				out.addData("disconnected", user.getName());
 
 			log.log(Level.INFO, "outputMessage: " + out.toString());
 			sendToAll(out.toString(), session, hashProduction);
 		}
 	}
-	
+
 	/**
 	 * Handles the SEND_MESSAGE message
 	 * 
@@ -243,10 +243,10 @@ public class CooperativeEditorWS {
 		SoundEffect se = upc.getSoundEffect();
 		out.addData("effect", se.getEffect());
 		out.addData("position", se.getPosition());
-		
+		out.addData("timbre", se.getTimbre());
 		return out;
 	}
-	
+
 	/**
 	 * Handles the TYPING message
 	 * 
@@ -255,63 +255,65 @@ public class CooperativeEditorWS {
 	 */
 	private OutputMessage typingHandler(InputMessage input) {
 		OutputMessage out = new OutputMessage();
-		
+
 		out.setType(Type.TYPING.name());
 		out.addData("user", input.getUser().getName());
 		UserProductionConfiguration upc = input.getUser().getUserProductionConfiguration();
 		SoundEffect se = upc.getSoundEffect();
 		out.addData("effect", se.getEffect());
 		out.addData("position", se.getPosition());
+		out.addData("timbre", se.getTimbre());
 		return out;
 	}
-	
+
 	/**
 	 * Handles the FINISH_RUBRIC message
 	 * 
 	 * @param InputMessage input : Object input message
 	 * @return OutputMessage
 	 */
-	private OutputMessage finishRubricHandler(InputMessage input, Session session,  String hashProduction) {
+	private OutputMessage finishRubricHandler(InputMessage input, Session session, String hashProduction) {
 		OutputMessage out = null;
 		UserRubricStatus userRubricStatus = input.getUserRubricStatus();
-		if(userRubricStatus != null) {
+		if (userRubricStatus != null) {
 			out = new OutputMessage();
 			out.setType(Type.FINISH_RUBRIC.name());
 			Production production = findProductionFromDataBase(hashProduction);
 			List<RubricProductionConfiguration> rpc = production.getRubricProductionConfigurations();
-			out.addData("rubricProductionConfiguration",rpc.toString());
-			
+			out.addData("rubricProductionConfiguration", rpc.toString());
+
 			User user = findUserOnList(session, hashProduction);
-			if(user.getUserProductionConfiguration() != null)
+			if (user.getUserProductionConfiguration() != null)
 				out.addData("upcUser", user.getUserProductionConfiguration().toString());
-			
+
 		}
 		return out;
 	}
-	
+
 	/**
 	 * Difference between two contributions
 	 * 
 	 * @param Contribution contribution Object
 	 * @param Contribution oldContribution Object
 	 * @return String in HTML
-	 */	
-	private String diffFormatHtml(Contribution contribution, Contribution oldContribution) {		
+	 */
+	private String diffFormatHtml(Contribution contribution, Contribution oldContribution) {
 		diff_match_patch dmp = new diff_match_patch();
-	    LinkedList<diff_match_patch.Diff> diff = dmp.diff_main(oldContribution.getContent().toString(), contribution.getContent().toString());
-	    dmp.diff_cleanupSemantic(diff);
+		LinkedList<diff_match_patch.Diff> diff = dmp.diff_main(oldContribution.getContent().toString(),
+				contribution.getContent().toString());
+		dmp.diff_cleanupSemantic(diff);
 		return dmp.diff_prettyHtml(diff);
 	}
-	
+
 	/**
 	 * Handles the REQUEST_PARTICIPATION message
 	 * 
 	 * @param InputMessage input : Object input message
-	 * @param Session session : Web Socket session
-	 * @param String hashProduction : The hash that identify the production 
+	 * @param Session      session : Web Socket session
+	 * @param String       hashProduction : The hash that identify the production
 	 * @return OutputMessage
 	 */
-	private OutputMessage requestParticipationHandler(InputMessage input,Session session,String hashProduction) {
+	private OutputMessage requestParticipationHandler(InputMessage input, Session session, String hashProduction) {
 		OutputMessage out = null;
 		if (!this.hasAnyoneContributed(hashProduction)) {
 			out = new OutputMessage();
@@ -332,37 +334,40 @@ public class CooperativeEditorWS {
 		}
 		return out;
 	}
-	
+
 	/**
 	 * Handles the FINISH_PARTICIPATION message
 	 * 
 	 * @param InputMessage input : Object input message
-	 * @param String hashProduction : The hash that identify the production 
+	 * @param String       hashProduction : The hash that identify the production
 	 * @return OutputMessage
 	 */
-	private OutputMessage finishParticipationHandler(InputMessage input,Session session, String hashProduction) {
+	private OutputMessage finishParticipationHandler(InputMessage input, Session session, String hashProduction) {
 		// Return user with less tickets used
-		User use = Collections.max(activeUsers.get(hashProduction), new Comparator<User>(){
+		User use = Collections.max(activeUsers.get(hashProduction), new Comparator<User>() {
 			@Override
 			public int compare(User o1, User o2) {
 				int a = -1;
-				if(o1.getUserProductionConfiguration() != null && o2.getUserProductionConfiguration() != null)
-					if(o1.getUserProductionConfiguration().getTicketsUsed() < o2.getUserProductionConfiguration().getTicketsUsed()) 
+				if (o1.getUserProductionConfiguration() != null && o2.getUserProductionConfiguration() != null)
+					if (o1.getUserProductionConfiguration().getTicketsUsed() < o2.getUserProductionConfiguration()
+							.getTicketsUsed())
 						a = 1;
 				return a;
-			}});
-		
+			}
+		});
+
 		int lessTicketUsed = use.getUserProductionConfiguration().getTicketsUsed();
-		
+
 		int limint = use.getUserProductionConfiguration().getProduction().getMinimumTickets();
-						
+
 		OutputMessage out = new OutputMessage();
 		out.setType(Type.FINISH_PARTICIPATION.name());
 		List<String> strUPC = new ArrayList<String>();
-		
+
 		for (User u : activeUsers.get(hashProduction)) {
-			if (u.getUserProductionConfiguration() != null) {			
-				if(lessTicketUsed < u.getUserProductionConfiguration().getTicketsUsed() || limint == u.getUserProductionConfiguration().getTicketsUsed().intValue())
+			if (u.getUserProductionConfiguration() != null) {
+				if (lessTicketUsed < u.getUserProductionConfiguration().getTicketsUsed()
+						|| limint == u.getUserProductionConfiguration().getTicketsUsed().intValue())
 					u.getUserProductionConfiguration().setSituation(Situation.BLOCKED);
 				else
 					u.getUserProductionConfiguration().setSituation(Situation.FREE);
@@ -372,13 +377,13 @@ public class CooperativeEditorWS {
 		}
 		out.addData("userProductionConfigurations", strUPC.toString());
 		out.addData("contribution", input.getContribution().toString());
-		
+
 		User user = findUserOnList(session, hashProduction);
 		out.addData("author", user.toString());
-		
+
 		return out;
 	}
-	
+
 	/**
 	 * Send to all connected users in web socket server
 	 * 
@@ -387,9 +392,9 @@ public class CooperativeEditorWS {
 	private void sendToAll(String message, Session session, String hashProduction) {
 		try {
 			synchronized (activeUsers.get(hashProduction)) {
-				for (User u : activeUsers.get(hashProduction)) 
+				for (User u : activeUsers.get(hashProduction))
 					if (Boolean.TRUE.equals(u.getSession().getUserProperties().get(hashProduction)))
-						u.getSession().getBasicRemote().sendText(message);				
+						u.getSession().getBasicRemote().sendText(message);
 			}
 		} catch (IOException ex) {
 			ex.printStackTrace();
@@ -417,7 +422,7 @@ public class CooperativeEditorWS {
 		Boolean findBySession = (indexer instanceof Session);
 		User user = null;
 		for (User u : activeUsers.get(hashProduction)) {
-			if(findBySession) {
+			if (findBySession) {
 				String idSesssion = u.getSession().getId();
 				if (idSesssion.equals(((Session) indexer).getId()))
 					user = u;
@@ -439,7 +444,7 @@ public class CooperativeEditorWS {
 	private Production findProductionFromDataBase(String hashProduction) {
 		return dao.getProductionByUrl(hashProduction);
 	}
-	
+
 	/**
 	 * 
 	 * @param String hashProduction
@@ -447,17 +452,17 @@ public class CooperativeEditorWS {
 	 */
 	private Boolean hasAnyoneContributed(String hashProduction) {
 		Boolean a = false;
-			for (User u : activeUsers.get(hashProduction))
-				if(u.getUserProductionConfiguration() != null)
-					if (u.getUserProductionConfiguration().getSituation().equals(Situation.CONTRIBUTING))
-						a = true;
+		for (User u : activeUsers.get(hashProduction))
+			if (u.getUserProductionConfiguration() != null)
+				if (u.getUserProductionConfiguration().getSituation().equals(Situation.CONTRIBUTING))
+					a = true;
 		return a;
 	}
 
 	/**
 	 * Creates the input message object
 	 * 
-	 * @param String jsonMessage : JSON message from the client
+	 * @param String   jsonMessage : JSON message from the client
 	 * @param Sesstion session : Web Socket session
 	 * @return InputMessage object
 	 */
@@ -504,7 +509,7 @@ public class CooperativeEditorWS {
 						rPC = ruPC;
 						break;
 					}
-				}			
+				}
 
 				Rubric rubric = rPC.getRubric();
 				UserRubricStatus userRubricStatus = new UserRubricStatus();
@@ -514,27 +519,26 @@ public class CooperativeEditorWS {
 				userRubricStatus.setRubric(rubric);
 				userRubricStatus.setProduction(production);
 				dao.persistUserRubricStatus(userRubricStatus);
-				
+
 				input.setUserRubricStatus(userRubricStatus);
-				
+
 				rPC.getRubric().addUserRubricStatus(userRubricStatus);
 				production.addUserRubricStatus(userRubricStatus);
-				
+
 			} else if (input.getType().equals(Type.FINISH_PARTICIPATION.toString())) {
-				
+
 				Content content = new Content();
 				JsonParser parser = new JsonParser();
 				JsonObject objeto = parser.parse(jsonMessage).getAsJsonObject();
 				content = gson.fromJson(objeto.get("content").toString(), Content.class);
-				
-				
+
 				Contribution contribution = new Contribution();
 				contribution.setUser(user);
 				contribution.setProduction(production);
 				contribution.setContent(content);
 				contribution.setMoment(new Date());
-				contribution.setCard(0);			    
-						
+				contribution.setCard(0);
+
 				try {
 					dao.persistContribution(contribution);
 					user.getUserProductionConfiguration().increaseTicketsUsed();
@@ -543,7 +547,7 @@ public class CooperativeEditorWS {
 				} catch (Exception e) {
 					// TODO: handle exception
 				}
-				
+
 				input.setContribution(contribution);
 			}
 		}
@@ -554,7 +558,7 @@ public class CooperativeEditorWS {
 	/**
 	 * Register the user by creating a creates the input message object
 	 * 
-	 * @param String userId : user Id
+	 * @param String   userId : user Id
 	 * @param Sesstion session : Web Socket session
 	 * @return OutputMessage object
 	 */
@@ -575,13 +579,12 @@ public class CooperativeEditorWS {
 		// Add the user in the WS connected users
 		activeUsers.get(hashProduction).add(user);
 
-		dao.persistInputMessage(input);		
+		dao.persistInputMessage(input);
 
 		OutputMessage out = new OutputMessage();
 		out.setType(Type.NEW_CONNECTED.name());
-		if(user.getUserProductionConfiguration() != null)
-			out.addData("userProductionConfiguration", user.getUserProductionConfiguration().toString() );
-		
+		if (user.getUserProductionConfiguration() != null)
+			out.addData("userProductionConfiguration", user.getUserProductionConfiguration().toString());
 
 		return out;
 	}
